@@ -90,18 +90,11 @@ Flow level
 Each file contains a function ``gen_pcap`` within this function the pieces of code allowing 
 the generation of the ``.pcap`` file are commented. The files are the following:  
 
-* ``script_packet_generation_scapy_flow_connect_*.py``: allows the generation of flows in 
-connected mode. For example, applications using TCP (Transport Control Protocol), the start 
-and end structure of the flow will be taken into account. The "Google Home" version is 
-specific to Google Home data.  
-* ``script_packet_generation_scapy_flow_no_connect_*.py``: allows the generation of a flow 
-in unconnected mode. For example, a communication between two devices in UDP (User Datagram 
-Protocol) mode. The "Google Home" version is specific to Google Home data.  
-* ``script_packet_generation_scapy_no_flow_*py``: allows the generation of a set of packets 
-without flow information. The "LoRaWAN" version is specific to LoRaWAN data.  
+* ``script_packet_generation_scapy_flow_connect_*.py``: allows the generation of flows in connected mode. For example, applications using TCP (Transport Control Protocol), the start and end structure of the flow will be taken into account. The "Google Home" version is specific to Google Home data.  
+* ``script_packet_generation_scapy_flow_no_connect_*.py``: allows the generation of a flow in unconnected mode. For example, a communication between two devices in UDP (User Datagram Protocol) mode. The "Google Home" version is specific to Google Home data.  
+* ``script_packet_generation_scapy_no_flow_*py``: allows the generation of a set of packets without flow information. The "LoRaWAN" version is specific to LoRaWAN data.  
 
-The generation of a set of flows can be done by following the dynamics present in the original 
-data (a dynamic present over a particular period) or by using an aggregate of generated flows.  
+The generation of a set of flows can be done by following the dynamics present in the original data (a dynamic present over a particular period) or by using an aggregate of generated flows.  
 
 
 Agregate level
