@@ -89,6 +89,7 @@ Flow level
 
 Each file contains a function ``gen_pcap`` within this function the pieces of code allowing 
 the generation of the ``.pcap`` file are commented. The files are the following:  
+
 * ``script_packet_generation_scapy_flow_connect_*.py``: allows the generation of flows in 
 connected mode. For example, applications using TCP (Transport Control Protocol), the start 
 and end structure of the flow will be taken into account. The "Google Home" version is 
@@ -106,9 +107,7 @@ data (a dynamic present over a particular period) or by using an aggregate of ge
 Agregate level
 ^^^^^^^^^^^^^^
 
-* ``script_flows_generation_scapy.py``: allows the generation of a set of flows but not the 
-associated packets. A flow level generation will have to be used to be able to generate a set 
-of packets.  
+* ``script_flows_generation_scapy.py``: allows the generation of a set of flows but not the associated packets. A flow level generation will have to be used to be able to generate a set of packets.  
 
 
 Notebooks
@@ -127,21 +126,12 @@ The folder includes all the files that have allowed to process the data and to t
 make the modeling. The files present as well as their order of use is the following:  
 
 * ``scapy_layers.py``: files which allows the analysis of some protocols not supported by Scapy.  
-* ``script_extraction.py``: loads a ``.pcap`` file and retrieves information about each packet 
-(size, headers, arrival time, ...). The data is then exported as several .csv files. The "Google 
-Home" version is specific to Google Home data. This version allows to browse several files in 
-the same folder.  
-* ``script_reducer_*.py``: aggregates all the ``.csv`` files formed after using the script 
-``script_extraction.py``. The "Google Home" version is specific to Google Home data.  
+* ``script_extraction.py``: loads a ``.pcap`` file and retrieves information about each packet (size, headers, arrival time, ...). The data is then exported as several .csv files. The "Google Home" version is specific to Google Home data. This version allows to browse several files in the same folder.  
+* ``script_reducer_*.py``: aggregates all the ``.csv`` files formed after using the script ``script_extraction.py``. The "Google Home" version is specific to Google Home data.  
 * ``script_flow_extraction.py``: identifies the flows.  
-* ``script_feature_engineering.py``: In a first step, the script extracts new characteristics 
-such as the flow on a jumping or sliding window, the time difference between two successive 
-packets, ... In a second step, the categorical values are transformed into numerical values. 
-A ``log10`` transformation is applied on the time features. The "Google Home" version is 
-specific to Google Home data.  
+* ``script_feature_engineering.py``: In a first step, the script extracts new characteristics such as the flow on a jumping or sliding window, the time difference between two successive packets, ... In a second step, the categorical values are transformed into numerical values. A ``log10`` transformation is applied on the time features. The "Google Home" version is specific to Google Home data.  
 
-The data from the LoRaWAN network did not need any processing. Only the extraction of new features 
-(script ``script_feature_engineering.py``) had to be done.  
+The data from the LoRaWAN network did not need any processing. Only the extraction of new features (script ``script_feature_engineering.py``) had to be done.  
 
 
 
