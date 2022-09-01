@@ -30,8 +30,7 @@ We sample a cluster identified in the latent space thanks to the GMM (Gaussian M
 and we use the VAE (Variational AutoEncoder) decoder to reconstruct the parameters of the packet. 
 The following scripts are to be used:  
 
-* ``script_vae_*_training.py``: allows the learning of the VAE (Variational AutoEncoder). 
-There is a different script for each data set.  
+* ``script_vae_*_training.py``: allows the learning of the VAE (Variational AutoEncoder). There is a different script for each data set.  
 * ``script_gmm_training.py``: shows how to train the GMM (Gaussian Mixture Model).  
 
 
@@ -39,16 +38,9 @@ There is a different script for each data set.
 Flow level
 ^^^^^^^^^^^^
 
-* ``script_lstm_scapy_flow_connect_training``: allows the learning of the LSTM (Long Short-Term 
-Memory) model for the generation of a flow in connected mode. For example, applications using 
-TCP (Transport Control Protocol), the start and end structure of the flow will be taken into 
-account.  
-* ``script_lstm_scapy_flow_no_connect_training``: allows the learning of the LSTM (Long 
-Short-Term Memory) model for the generation of a flow in unconnected mode. For example, 
-a communication between two devices in UDP (User Datagram Protocol) mode.  
-* ``script_lstm_scapy_no_flow_*_training``: allows the learning of the LSTM (Long 
-Short-Term Memory) model for the generation of a set of packets without flow information. 
-The "LoRaWAN" version is specific to LoRaWAN data.  
+* ``script_lstm_scapy_flow_connect_training``: allows the learning of the LSTM (Long Short-Term Memory) model for the generation of a flow in connected mode. For example, applications using TCP (Transport Control Protocol), the start and end structure of the flow will be taken into account.  
+* ``script_lstm_scapy_flow_no_connect_training``: allows the learning of the LSTM (Long Short-Term Memory) model for the generation of a flow in unconnected mode. For example, a communication between two devices in UDP (User Datagram Protocol) mode.  
+* ``script_lstm_scapy_no_flow_*_training``: allows the learning of the LSTM (Long Short-Term Memory) model for the generation of a set of packets without flow information. The "LoRaWAN" version is specific to LoRaWAN data.  
 
 
 
