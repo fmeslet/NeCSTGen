@@ -28,6 +28,6 @@ num = df_result['num_packet'].values.max() + 1
 
 df_result = df_result.sort_values(by='num_packet', ascending=True)
 df_result = df_result.reset_index(drop=True)
-df_result.to_csv(f"{SAVE_DIR}df_{num}_{FILENAME}Test.csv", index=False)
+df_result.to_csv(f"{SAVE_DIR}df_{num}_{FILENAME}.csv", index=False)
 
 # Supprimer les arrays traités

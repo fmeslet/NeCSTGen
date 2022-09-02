@@ -1,3 +1,4 @@
+
 #!/usr/bin/python3
 #-*-coding: utf-8-*-
 
@@ -6,9 +7,7 @@
 #############################################
 
 # Avoid bug
-from sklearn.cluster import KMeans, DBSCAN
 from itertools import groupby
-from sklearn.neighbors import KernelDensity
 from scapy.utils import PcapWriter
 from scapy.layers import *
 from collections import *
@@ -111,11 +110,6 @@ from sklearn.cluster import KMeans, DBSCAN
 from itertools import groupby
 from sklearn.neighbors import KernelDensity
 
-
-from sklearn.cluster import KMeans, DBSCAN
-from itertools import groupby
-from sklearn.neighbors import KernelDensity
-
 class Generator():
     def __init__(self, vae, 
                  limit_predict):
@@ -129,25 +123,6 @@ class Generator():
     ################
     # FIT FUNCTION
     ################
-    
-    def fit_kmeans(self, X, 
-                   n_clusters=16):
-        km = KMeans(n_clusters=n_clusters, 
-                             random_state=42)
-        self.dict_algo['kmeans'] = km
-        km.fit(X)
-        
-    def fit_kde(self, X):
-        kd = KernelDensity()
-        self.dict_algo['kde'] = kd
-        
-    def fit_dbscan(self, X, 
-                   eps=0.25, 
-                   min_samples=2):
-        db = DBSCAN(eps=eps, 
-                    min_samples=min_samples)
-        self.dict_algo['dbscan'] = db
-        self.dict_algo['dbscan'].fit(X)
         
     def fit_gmm(self, X, 
                 n_components=70, 
@@ -164,12 +139,6 @@ class Generator():
     ####################
     # PREDICT FUNCTION
     ####################
-        
-    def predict_kmeans(self, X):
-        return self.dict_algo['kmeans'].predict(X)
-    
-    def predict_dbscan(self, X):
-        return self.dict_algo['dbscan'].predict(X)
     
     def predict_gmm(self, X):
         return self.dict_algo['gmm'].predict(X)
@@ -421,10 +390,6 @@ def transform_packet_bit_bytes(packet_bit):
     packet_bytes = transform_packet_int_bytes(packet_int[0])
     return packet_bytes
 
-def standardize(x, min_x, max_x, a, b):
-  # x_new in [a, b]
-    x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
-    return x_new
 
 def gen_seq_labels(generator, 
                    limit_gmm,
@@ -600,23 +565,28 @@ def write_to_pcap(model,
                   dict_flags=None,
                   filename="test.pcap"):
 
-    src_ip = "19.168.1.12"
-    dst_ip = "8.8.8.8"
+    
+    # Define parameters to create
+    # the header
+    # src_ip = "19.168.1.12"
+    # dst_ip = "8.8.8.8"
+    # src_port = 10345
+    # dst_port = 80
 
-    src_port = 10345
-    dst_port = 80
-
-    #pcap = PcapWriter(
+    # Write 
+    # pcap = PcapWriter(
     #    filename, append = True, sync = False)
 
+    # Define variables
     timesteps = inputs.shape[1]
-    #print("[DEBUG][write_to_pcap] timesteps : ", timesteps)
     num_df_feat = df_feat.shape[-1]
     num_feat = inputs.shape[-1]
     num_arr_feat = num_feat - num_df_feat
 
     inputs = inputs.copy()
+
     
+    # Create list to save values generate
     length_all_lstm = []
     length_all_vae = []
 
@@ -633,6 +603,7 @@ def write_to_pcap(model,
 
     direction_all = []
     flags_all = []
+
 
     # Ajout des inputs
     # It's not important if timesteps are 0 at the beginning
@@ -813,14 +784,10 @@ def write_to_pcap(model,
         inputs = np.concatenate(
             (inputs, next_input), axis=1)
 
-        #print("[DEBUG][write_to_pcap] next_input shape : ", next_input.shape)
-        #print("[DEBUG][write_to_pcap] inputs shape : ", inputs.shape)
-
-        # On bloque l'écriture de chose bizarre au début...
-        # *2 car on démarre à partir de timesteps
-        #if(i >= timesteps*2):
+        # Write packets
         #pcap._write_header(pred_packet)
         #pcap._write_packet(pred_packet, sec=sec, usec=usec)
+
         
     if (with_flags):
         data_return = pd.DataFrame({"length_total_lstm" : length_all_lstm,
@@ -1193,15 +1160,6 @@ class Processing():
             
         return le
             
-    #def reverse_transform_le(self, col, normalize, le):
-    #    self.df_process[col] = le.inverse_transform(self.df_process[col])
-    #    
-    #    if (normalize):
-    #        self.df_process[col] = standardize(
-    #          self.df_process[col], min_x=self.df_process[col].min(),
-    #            max_x=self.df_process[col].max(), a=0, b=1)
-              
-    # self.dict_map_layers_0[k]
     
     def process(self, normalize=True):
         #self.df_process['time_diff'] = self.df_raw['timestamps'].diff(1)

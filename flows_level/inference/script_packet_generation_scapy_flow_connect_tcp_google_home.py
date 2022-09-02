@@ -1,3 +1,4 @@
+
 #!/usr/bin/python3
 #-*-coding: utf-8-*-
 
@@ -6,9 +7,7 @@
 #############################################
 
 # Avoid bug
-from sklearn.cluster import KMeans, DBSCAN
 from itertools import groupby
-from sklearn.neighbors import KernelDensity
 from scapy.utils import PcapWriter
 from scapy.layers import *
 from collections import *

@@ -40,7 +40,7 @@ from tensorflow.keras.datasets import cifar10
 # SET PARAMETERS
 #############################################
 
-FILENAME = "df_raw_LORA_10"
+FILENAME = "df_week1_monday"
 MODELS_DIR = "MODELS/"
 MAIN_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
 DATA_PATH = MAIN_DIR + FILENAME
@@ -49,9 +49,8 @@ TIMESTEPS = 11
 TIME_LENGTH = "MONDAY" # OR WEEK_1
 FULL_NAME = f"{TIME_LENGTH}_T{TIMESTEPS}"
 
-PROTO = "LORA"
+PROTO = "HTTP"
 print("PROTO : ", PROTO)
-EXT_NAME = "10"
 
 tf.keras.backend.set_floatx('float64')
 
@@ -254,23 +253,56 @@ def build_decoder_dense(nb_feat, input_shape):
 # LAUNCH TRAINING
 #############################################
 
+
+
 # PREPARE DATA
 
-columns = ['fport', 'mtype', 'code_rate', 'size', 'bandwidth',
-           'spreading_factor', 'frequency', 'crc_status', 
-           'length_total', 'time_diff', 'snr', 'rssi', 
-            'rate', 'rolling_rate_byte_sec', 'rolling_rate_byte_min',
-            'rolling_rate_packet_sec', 'rolling_rate_packet_min',
-            'header_length', 'payload_length', 'fcnt']
 
-data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/{FILENAME}.csv")
-data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}_{EXT_NAME}.csv")
 
-X = data[columns].values
+# If data come from darpa dataset
+if (PROTO in ["HTTP", "SMTP", "DNS", "SNMP"]):
+
+    columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', 'flags', 'sport',
+               'dport', 'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
+                'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
+
+# If data come from Google Home dataset
+elif(PROTO == "TCP_GOOGLE_HOME"):
+
+    print("JE PASSE PAR TCP")
+    columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', 'count_pkt',
+           'flags', 'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
+            'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
+
+elif(PROTO == "TCP_GOOGLE_HOME"):
+
+    print("JE PASSE PAR UDP")
+    columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', # 'count_pkt',
+            'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
+            'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
+
+# If data come from LoRaWAN dataset
+elif ((PROTO == "LORA_10") or 
+      (PROTO == "LORA_1")):
+
+    columns = ['fport', 'mtype', 'code_rate', 'size', 'bandwidth',
+               'spreading_factor', 'frequency', 'crc_status', 
+               'length_total', 'time_diff', 'snr', 'rssi', 
+                'rate', 'rolling_rate_byte_sec', 'rolling_rate_byte_min',
+                'rolling_rate_packet_sec', 'rolling_rate_packet_min',
+                'header_length', 'payload_length', 'fcnt']
+
+
+
+data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/df_raw_{PROTO}.csv")
+data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
+
 
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS # A AUGMENTER !
 range_fit = DATA_RANGE
+
+X = data[columns].values
 
 X_seq = create_windows(X, window_shape=look_back, end_id=-look_ahead)
 X_idx = np.arange(0, X_seq.shape[0])
@@ -314,7 +346,7 @@ cbs = [tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss',
        #              restore_best_weights=True)]
 
 vae = VAE(encoder, decoder, gamma=1)
-vae.compile(optimizer=keras.optimizers.Adam(1e-3), run_eagerly=False) # False
+vae.compile(optimizer=keras.optimizers.Adam(1e-4), run_eagerly=False) # False
 history_vae = vae.fit([X_train, X_train], 
                       validation_data=(X_val, X_val),
                       epochs=50, # 100
@@ -329,5 +361,5 @@ print(history_vae.history)
 # SAVE MODEL and VALUES
 #############################################
 
-encoder.save(f"{MODELS_DIR}encoder_vae_{FULL_NAME}_{PROTO}_{EXT_NAME}_FINAL.h5")
-decoder.save(f"{MODELS_DIR}decoder_vae_{FULL_NAME}_{PROTO}_{EXT_NAME}_FINAL.h5")
+encoder.save(f"{MODELS_DIR}encoder_vae_{FULL_NAME}_{PROTO}_FINAL.h5")
+decoder.save(f"{MODELS_DIR}decoder_vae_{FULL_NAME}_{PROTO}_FINAL.h5")

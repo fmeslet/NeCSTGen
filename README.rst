@@ -30,13 +30,15 @@ We sample a cluster identified in the latent space thanks to the GMM (Gaussian M
 and we use the VAE (Variational AutoEncoder) decoder to reconstruct the parameters of the packet. 
 The following scripts are to be used:  
 
-* ``script_vae_*_training.py``: allows the learning of the VAE (Variational AutoEncoder). There is a different script for each data set.  
+* ``script_vae_training.py``: allows the learning of the VAE (Variational AutoEncoder).
 * ``script_gmm_training.py``: shows how to train the GMM (Gaussian Mixture Model).  
 
 
 
 Flow level
 ^^^^^^^^^^^^
+
+The files used to trained the LSTM (Long Short-Term Memory) model for flow generation are the following: 
 
 * ``script_lstm_scapy_flow_connect_training``: allows the learning of the LSTM (Long Short-Term Memory) model for the generation of a flow in connected mode. For example, applications using TCP (Transport Control Protocol), the start and end structure of the flow will be taken into account.  
 * ``script_lstm_scapy_flow_no_connect_training``: allows the learning of the LSTM (Long Short-Term Memory) model for the generation of a flow in unconnected mode. For example, a communication between two devices in UDP (User Datagram Protocol) mode.  
@@ -47,8 +49,7 @@ Flow level
 Agregate level
 ^^^^^^^^^^^^^^
 
-* ``script_flows_generation_scapy.py``: shows how to train the GMM (Gaussian Mixure Model) 
-allowing the generation of the characteristics of a flow.  
+* ``script_flows_generation_scapy.py``: shows how to train the GMM (Gaussian Mixure Model) allowing the generation of the characteristics of a flow.  
 
 
 
@@ -71,8 +72,7 @@ We sample a cluster identified in the latent space thanks to the GMM (Gaussian M
 and we use the VAE (Variational AutoEncoder) model decoder to reconstruct the parameters of 
 the packet. The following scripts are to be used:  
 
-* ``script_packet_generation.py``: shows how to generate a packet with the GMM (Gaussian 
-Mixture Model) and the VAE (Variational AutoEncoder).  
+* ``script_packet_generation.py``: shows how to generate a packet with the GMM (Gaussian Mixture Model) and the VAE (Variational AutoEncoder).  
 
 
 
