@@ -649,7 +649,6 @@ code_rate_encoded = tf.keras.utils.to_categorical(values_tmp)
 
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS # A AUGMENTER !
-range_fit = DATA_RANGE
 
 X = data[columns].values #[range_fit[0]:range_fit[1]]
 X_seq = create_windows(X, window_shape=look_back, end_id=-look_ahead)
@@ -678,7 +677,6 @@ print(f"X_val shape : {X_val.shape}")
 
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS
-range_fit_lstm = [0, X.shape[0]]
 
 Z = vae_output_decoder
 

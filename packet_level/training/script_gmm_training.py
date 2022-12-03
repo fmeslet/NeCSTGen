@@ -1,4 +1,3 @@
-
 #!/usr/bin/python3
 #-*-coding: utf-8-*-
 
@@ -23,7 +22,6 @@ import tensorflow as tf
 # Sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from sklearn.manifold import TSNE
 from sklearn import preprocessing
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 
@@ -31,7 +29,6 @@ from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.datasets import cifar10
 
 # Personnal functions
 # import functions
@@ -45,7 +42,6 @@ FILENAME = "df_week1_monday"
 MODELS_DIR = "MODELS/"
 MAIN_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
 DATA_PATH = MAIN_DIR + FILENAME
-DATA_RANGE = [0, 200000]
 TIMESTEPS = 11
 TIME_LENGTH = "MONDAY" # OR WEEK_1
 FULL_NAME = f"{TIME_LENGTH}_T{TIMESTEPS}"
@@ -264,14 +260,12 @@ if (PROTO in ["HTTP", "SMTP", "DNS", "SNMP"]):
 # If data come from Google Home dataset
 elif(PROTO == "TCP_GOOGLE_HOME"):
 
-    print("JE PASSE PAR TCP")
     columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', 'count_pkt',
            'flags', 'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
             'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
 
 elif(PROTO == "TCP_GOOGLE_HOME"):
 
-    print("JE PASSE PAR UDP")
     columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', # 'count_pkt',
             'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
             'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
@@ -288,7 +282,6 @@ elif ((PROTO == "LORA_10") or
                 'header_length', 'payload_length', 'fcnt']
 
 
-
 data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/df_raw_{PROTO}.csv")
 data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 
@@ -298,7 +291,6 @@ data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS # A AUGMENTER !
-range_fit = DATA_RANGE
 
 X = data[columns].values
 
@@ -336,7 +328,7 @@ Z_sampling = Sampling()([z_mean, z_log_var]).numpy()
 
 
 
-# VISUALIZE THE CLUSTERS
+# VISUALIZE THE LATENT SPACE
 
 
 
@@ -365,17 +357,15 @@ gmm = GaussianMixture(n_components=25, #means_init.shape[0],
                       #means_init=means_init
                      )
 
-# FIT ONLY ON TRAIN DATA
+# Fit model
 gmm.fit(Z_sampling)
 
 # For plotting cluster sequence
 seq_labels = gmm.predict(Z_sampling)
 
 
-
 # PLOT GAUSSIAN (with covariance matrices)
 # set up on each cluster
-
 
 
 # Train again the GMM if the clusters are note

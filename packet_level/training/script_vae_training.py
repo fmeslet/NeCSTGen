@@ -44,7 +44,6 @@ FILENAME = "df_week1_monday"
 MODELS_DIR = "MODELS/"
 MAIN_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
 DATA_PATH = MAIN_DIR + FILENAME
-DATA_RANGE = [0, 200000]
 TIMESTEPS = 11
 TIME_LENGTH = "MONDAY" # OR WEEK_1
 FULL_NAME = f"{TIME_LENGTH}_T{TIMESTEPS}"
@@ -269,14 +268,12 @@ if (PROTO in ["HTTP", "SMTP", "DNS", "SNMP"]):
 # If data come from Google Home dataset
 elif(PROTO == "TCP_GOOGLE_HOME"):
 
-    print("JE PASSE PAR TCP")
     columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', 'count_pkt',
            'flags', 'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
             'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
 
 elif(PROTO == "TCP_GOOGLE_HOME"):
 
-    print("JE PASSE PAR UDP")
     columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', # 'count_pkt',
             'length_total', 'time_diff', 'rate', "rolling_rate_byte_sec", 'rolling_rate_byte_min',
             'rolling_rate_packet_sec', 'rolling_rate_packet_min', 'header_length', 'payload_length']
@@ -300,7 +297,6 @@ data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS # A AUGMENTER !
-range_fit = DATA_RANGE
 
 X = data[columns].values
 
@@ -325,7 +321,7 @@ print(f"X_val shape : {X_val.shape}")
 
 
 gc.collect()
-nb_feat = 2#data.columns.shape[0]
+nb_feat = 2
 encoder = build_encoder_dense(
     nb_feat=nb_feat, input_shape=X.shape[-1])
 decoder = build_decoder_dense(

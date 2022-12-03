@@ -68,19 +68,16 @@ The levels are the following:
 Packet level
 ^^^^^^^^^^^^
 
-We sample a cluster identified in the latent space thanks to the GMM (Gaussian Mixture Model) 
-and we use the VAE (Variational AutoEncoder) model decoder to reconstruct the parameters of 
-the packet. The following scripts are to be used:  
+We sample a cluster identified in the latent space thanks to the GMM (Gaussian Mixture Model) and we use the VAE (Variational AutoEncoder) model decoder to reconstruct the parameters of the packet. The following scripts are to be used:  
 
-* ``script_packet_generation.py``: shows how to generate a packet with the GMM (Gaussian Mixture Model) and the VAE (Variational AutoEncoder).  
+* ``script_packet_generation.py``: shows how to generate a packet with the GMM (Gaussian Mixture Model) and the VAE (Variational Auto-Encoder).  
 
 
 
 Flow level
 ^^^^^^^^^^^^
 
-Each file contains a function ``gen_pcap`` within this function the pieces of code allowing 
-the generation of the ``.pcap`` file are commented. The files are the following:  
+Each file contains a function ``gen_pcap`` within this function the pieces of code allowing the generation of the ``.pcap`` file are commented. The files are the following:  
 
 * ``script_packet_generation_scapy_flow_connect_*.py``: allows the generation of flows in connected mode. For example, applications using TCP (Transport Control Protocol), the start and end structure of the flow will be taken into account. The "Google Home" version is specific to Google Home data.  
 * ``script_packet_generation_scapy_flow_no_connect_*.py``: allows the generation of a flow in unconnected mode. For example, a communication between two devices in UDP (User Datagram Protocol) mode. The "Google Home" version is specific to Google Home data.  
@@ -98,8 +95,7 @@ Agregate level
 Notebooks
 ------------
 
-The notebook in the directory is the one used to generate the graphs to analyze the traffic 
-generated.  
+The notebook in the directory is the one used to generate the graphs to analyze the traffic generated.  
 
 
 
@@ -134,8 +130,7 @@ This folder contains the models used for generation. The models are named as fol
 Samples
 ------------
 
-The folder contains sample data used as input to scripts or obtained as output. Here is the list 
-of the files present and the associated information:  
+The folder contains sample data used as input to scripts or obtained as output. Here is the list of the files present and the associated information:  
 
 * 
 
