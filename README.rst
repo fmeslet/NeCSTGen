@@ -7,7 +7,7 @@ Summary
 
 NeCSTGen (Network Clustering Sequential Traffic Generation) is the Deep Learning architecture used 
 to classify generate network traffic. The model reproduces the original behaviour at the packet, 
-flow and aggregate levels. This work is published in IEEE GLOBECOM 2022 : 
+flow and aggregate levels. This work is published in IEEE GLOBECOM 2022 : `link: <https://ieeexplore.ieee.org/document/10000731>`_
 
 
 
