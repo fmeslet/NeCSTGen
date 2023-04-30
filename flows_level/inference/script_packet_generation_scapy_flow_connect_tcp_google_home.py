@@ -37,10 +37,11 @@ import tensorflow as tf
 
 # Sklearn
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.manifold import TSNE
 from sklearn import preprocessing
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.cluster import KMeans, DBSCAN
+from itertools import groupby
+from sklearn.neighbors import KernelDensity
 
 # Tensorflow
 from tensorflow import keras
@@ -106,10 +107,6 @@ def transform_packet_bit_int(packet_bit):
         packet_int.append(int(packet_bit_str, 2))
     return packet_int
 
-
-from sklearn.cluster import KMeans, DBSCAN
-from itertools import groupby
-from sklearn.neighbors import KernelDensity
 
 class Generator():
     def __init__(self, vae, 
@@ -416,11 +413,6 @@ def transform_packet_bit_bytes(packet_bit):
     packet_bytes = transform_packet_int_bytes(packet_int[0])
     return packet_bytes
 
-def standardize(x, min_x, max_x, a, b):
-  # x_new in [a, b]
-    x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
-    return x_new
-
 def gen_seq_labels(generator, 
                    limit_gmm,
                    df_raw,
@@ -457,8 +449,6 @@ def gen_seq_labels(generator,
 
     #seq_pred = [0,  2., 3., 4., 5.,  5.,  5.,
     #            5., 5., 5., 5., 5., 5., 5., 5., 24., 23., 22., 21.]
-    #seq_pred = [ 0., 1., 2.,  3., 5.,  5.,  5.,
-    #            5.,  24., 23., 22., 21.]
         
     return generator, flows_id
 
@@ -616,9 +606,6 @@ def gen_pcap(model,
         
     return seq_pred, df_ts, flows_id
 
-
-from scapy.utils import PcapWriter
-from scapy.layers import *
 
 def write_to_pcap(model, dict_flags,
                   inputs, df_feat, df_raw,
@@ -1384,7 +1371,7 @@ df_raw['index_max'] = df_raw['flow_id'].map(dict_index_max)
 ###############################
 
 
-# IDNETIFICATION FOR FIRST AND LAST PART
+# IDENTIFICATION FOR FIRST AND LAST PART
 indexes_flow = df_raw[['index_min', 'index_max']] \
                 .drop_duplicates(subset=['index_min', 'index_max'], 
                                  keep='first') \
@@ -1456,8 +1443,8 @@ df_concat['flow_index'] = df_concat.index.values - \
 
 
 # Limit index start and end
-# Deux limites différentes complique le MILIEU de la
-# génération du flux
+# Two different limits complicate 
+# the generation of the flow
 limit = 4
 min_val_gmm = 0
 dict_gmm = {}
@@ -1557,11 +1544,11 @@ for i in range(limit):
 
 
 ###########################
-# ECHANTILLONNAGE CLUSTERS
+# CLUSTERS SAMPLING
 ###########################
 
 
-# ECHANTILLONNAGE des clusters 
+# SAMPLING of each clusters
 def my_func(a, dict_gmm):
     gmm = dict_gmm[a[0]][0]
     idx = dict_gmm[a[0]][1]
@@ -1575,7 +1562,7 @@ seq_labels = df_concat['cluster'].values
 seq_labels_sample = np.apply_along_axis(
     my_func, 1, seq_labels.reshape(-1, 1), dict_gmm)
 
-# ON DECODE AVEC VAE
+# VAE decoding
 vae_output_decoder = vae.decoder.predict(seq_labels_sample)
 
 
@@ -1700,6 +1687,8 @@ lstm = tf.keras.models.load_model(f"{MODELS_DIR}LSTM_{FULL_NAME}_{PROTO}_{PROTO}
 #############################################
 
 
+# We can generate based on existing flow generation or based on
+# specific flow sequence in data
 if (FROM_FLOWS_GEN):
     filename = f"DF_GEN_FLOW_{PROTO}_FINAL.csv"
     df_flows_tmp = pd.read_csv(f"RESULTS/{filename}")
@@ -1727,10 +1716,11 @@ result = gen_pcap(model=lstm,
 
 if (FROM_FLOWS_GEN):
     result[1].to_csv(f"{RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}_FROM_FLOWS_GEN.csv", index=False)
+    print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}_FROM_FLOWS_GEN.csv")
 else:
     result[1].to_csv(f"{RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv", index=False)
+    print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv")
 
-print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv")
 print("[DEBUG] result[0] : ", result[0])
 print("[DEBUG] result[1] : ", result[1])
 

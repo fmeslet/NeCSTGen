@@ -30,11 +30,9 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.utils import to_categorical
 
-# Personnal functions
-# import functions
 
 #############################################
-# SET PARAMETERS
+# PARAMETERS
 #############################################
 
 
@@ -46,9 +44,10 @@ TIMESTEPS = 11
 TIME_LENGTH = "MONDAY" # OR WEEK_1
 FULL_NAME = f"{TIME_LENGTH}_T{TIMESTEPS}"
 
-PROTO = "HTTP"
+PROTO = "HTTP" # DEfine the protocol used
 print("PROTO : ", PROTO)
 
+# Set Tensorflow to float64 (by default set to float32)
 tf.keras.backend.set_floatx('float64')
 
 
@@ -57,9 +56,12 @@ tf.keras.backend.set_floatx('float64')
 #############################################
 
 
-
 class Sampling(layers.Layer):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
+
+    Args:
+        layers (_type_): _description_
+    """
     def build(self, input_shape):
         super(Sampling, self).build(input_shape)
 
@@ -72,7 +74,20 @@ class Sampling(layers.Layer):
     
     
 class VAE(keras.Model):
+    """Class which define a Beta Variational Autoencoder.
+
+    Args:
+        keras (tensorflow.keras.Model): Keras model.
+    """
     def __init__(self, encoder, decoder, gamma=0.5, **kwargs):
+        """Constructor.
+
+        Args:
+            encoder (tensorflow.keras.Model): Encoder part of the Variational Autoencoder.
+            decoder (tensorflow.keras.Model): Decoder part of the Variational Autoencoder.
+            gamma (float, optional): Beta paramter of a Beta-VAE (Beta Variational Autoencoder). 
+            Defaults to 0.5 (for a classical Variational Autoencoder).
+        """
         super(VAE, self).__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
@@ -86,6 +101,11 @@ class VAE(keras.Model):
 
     @property
     def metrics(self):
+        """Return the metrics used.
+
+        Returns:
+            list: Array of the metrics used.
+        """
         return [
             self.loss_tracker,
             self.reconstruction_loss_tracker,
@@ -93,17 +113,24 @@ class VAE(keras.Model):
         ]
 
     def call(self, inputs):
-        # ONLY FOR LSTM
-        data_input = inputs#[0]
-        #data_shift = inputs[1]
+        """Send the data at input and give back the output of the model.
 
+        Args:
+            inputs (numpy.array): Data give as input of the model.
+
+        Returns:
+            numpy.array: Data give as output of the model.
+            Reconstruction of the input data. 
+        """
+        data_input = inputs
+
+        # Get he mean and variance
         z_mean, z_log_var = self.encoder(data_input)
         z = self.sampling([z_mean, z_log_var])
-        # ONLY FOR LSTM
+
         reconstruction_raw = self.decoder(z)
-        #reconstruction_raw, states = self.decoder([z, data_shift])
         
-        reconstruction = tf.reshape(reconstruction_raw, [-1, 1]) # Avant 1 : 200
+        reconstruction = tf.reshape(reconstruction_raw, [-1, 1])
         data_cont = tf.reshape(data_input, [-1, 1])
 
         reconstruction_loss_0 = tf.reduce_sum(
@@ -111,7 +138,6 @@ class VAE(keras.Model):
         reconstruction_loss_1 = tf.reduce_sum(
                 keras.losses.mean_absolute_error(y_true=data_cont, y_pred=reconstruction), axis=(-1))
         reconstruction_loss = reconstruction_loss_0 + reconstruction_loss_1
-        #reconstruction_loss = reconstruction_loss_1
         
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = self.gamma * tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
@@ -121,33 +147,31 @@ class VAE(keras.Model):
         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.kl_loss_tracker.update_state(kl_loss)
 
-        #return reconstruction_raw, states
         return reconstruction_raw
 
     def train_step(self, data):
+        """Perform the backpropagation during the training and send back the performance obtained.
+
+        Args:
+            data (numpy.array): Data give as input of the model for training.
+
+        Returns:
+            dict: The name of the metrics used (keys) and the values obtained (values).
+        """
         if isinstance(data, tuple):
             data = data[0]
 
-        #data_input = data[0]
         data_cont = data[0]
         data_shift = data[1]
-        #data_output = data[2]
         
         with tf.GradientTape() as tape:
 
-            #print(tf.shape(data_cont))
-            #print(tf.shape(data_cat))
-
             z_mean, z_log_var = self.encoder(data_cont)
             z = self.sampling([z_mean, z_log_var])
-            # ONLY FOR LSTM
-            #reconstruction, states = self.decoder([z, data_shift])
-            reconstruction = self.decoder(z)
-            #reconstruction = reconstruction
-            
-            #print(tf.shape(reconstruction))
 
-            reconstruction = tf.reshape(reconstruction, [-1, 1]) # Avant 1 : 200
+            reconstruction = self.decoder(z)
+
+            reconstruction = tf.reshape(reconstruction, [-1, 1])
             data_cont = tf.reshape(data_cont, [-1, 1])
 
             reconstruction_loss_0 = tf.reduce_sum(
@@ -155,13 +179,12 @@ class VAE(keras.Model):
             reconstruction_loss_1 = tf.reduce_sum(
                     keras.losses.mean_absolute_error(y_true=data_cont, y_pred=reconstruction), axis=(-1))
             reconstruction_loss = reconstruction_loss_0 + reconstruction_loss_1
-            #reconstruction_loss = reconstruction_loss_1
 
             # Loss for first part
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = self.gamma * tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
 
-            total_loss = reconstruction_loss + kl_loss# + kl_loss_output
+            total_loss = reconstruction_loss + kl_loss
 
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -178,9 +201,17 @@ class VAE(keras.Model):
         }
     
 def build_encoder_dense(nb_feat, input_shape):
-    latent_dim = nb_feat#50*nb_feat
+    """Create an encoder for a Variational Autoencoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space.
+        input_shape (tuple): Shape of the input layer.
+
+    Returns:
+        tensorflow.Keras.Model: The encoder model. 
+    """
+    latent_dim = nb_feat
     encoder_inputs_0 = keras.Input(shape=(input_shape,))
-    #x = layers.Flatten()(encoder_inputs_0)
     x = encoder_inputs_0
 
     x = layers.Dense(8, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
@@ -194,14 +225,23 @@ def build_encoder_dense(nb_feat, input_shape):
     return encoder
 
 def build_decoder_dense(nb_feat, input_shape):
-    latent_dim = nb_feat#50*nb_feat
+    """Create a decoder for a Variational AutoEncoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space. 
+        input_shape (tuple): Shape of the input layers.
+
+    Returns:
+        tensorflow.Keras.Model: The decoder model.
+    """
+
+    latent_dim = nb_feat
     latent_inputs = keras.Input(shape=(latent_dim,))
 
     x = layers.Dense(4, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(latent_inputs)
     x = layers.Dense(6, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
     x = layers.Dense(8, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
     decoder_outputs = layers.Dense(input_shape, activation="sigmoid")(x)
-    #decoder_outputs = tf.reshape(x, [-1, 100, nb_feat])
 
     decoder = keras.Model(latent_inputs, outputs=decoder_outputs, name="decoder")
     
@@ -209,6 +249,16 @@ def build_decoder_dense(nb_feat, input_shape):
 
 
 def plot_gmm(X, index, title, s=.8, model):
+    """Plot data with the covariances matrices associate 
+    to each clusters define the Gaussian Mixture Model (GMM). 
+
+    Args:
+        X (numpy.array): Data to plot.
+        index (_type_): 
+        title (string): Title of the plot.
+        model (_type_): _description_
+        s (float, optional): Size of the point inside the scatter plot. Defaults to .8.
+    """
     means = model.means_
     covariances = model.covariances_
     Y_ = model.predict(X)
@@ -282,6 +332,7 @@ elif ((PROTO == "LORA_10") or
                 'header_length', 'payload_length', 'fcnt']
 
 
+# Load the data
 data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/df_raw_{PROTO}.csv")
 data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 
@@ -290,10 +341,13 @@ data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 #index = data_raw[condition_app].index.values
 
 look_back = TIMESTEPS
-look_ahead = TIMESTEPS # A AUGMENTER !
+look_ahead = TIMESTEPS
 
+# Extract usefull columns inside the data
 X = data[columns].values
 
+# Split the data. We use the create windows function, even if it's not necessary,
+# to keep consistency with 
 X_seq = create_windows(X, window_shape=look_back, end_id=-look_ahead)
 X_idx = np.arange(0, X_seq.shape[0])
 X_train_idx, X_val_idx, _, _ = sklearn.model_selection.train_test_split(X_idx, X_idx,
@@ -311,9 +365,7 @@ print(f"X_train shape : {X_train.shape}")
 print(f"X_val shape : {X_val.shape}")
 
 
-
 # LOAD VAE MODEL
-
 
 
 encoder = tf.keras.models.load_model(f"{MODELS_DIR}encoder_vae_{TIME_LENGTH}_T{TIMESTEPS}_{PROTO}_FINAL.h5", 
@@ -322,10 +374,10 @@ decoder = tf.keras.models.load_model(f"{MODELS_DIR}decoder_vae_{TIME_LENGTH}_T{T
                                   custom_objects={"LeakyReLU": tf.keras.layers.LeakyReLU})
 vae = VAE(encoder, decoder, gamma=1)
 
+# Project the data into a latent space wit the Variational Auencoder.
 z_mean, z_log_var = vae.encoder.predict(
     data[columns].values)
 Z_sampling = Sampling()([z_mean, z_log_var]).numpy()
-
 
 
 # VISUALIZE THE LATENT SPACE
@@ -350,7 +402,8 @@ Z_sampling = Sampling()([z_mean, z_log_var]).numpy()
 #                       [-0.7, 1]])
 
 
-gmm = GaussianMixture(n_components=25, #means_init.shape[0],
+gmm = GaussianMixture(n_components=25,
+                      #n_components=means_init.shape[0],
                       covariance_type='full',
                       init_params='kmeans',
                       max_iter=700,
@@ -366,12 +419,11 @@ seq_labels = gmm.predict(Z_sampling)
 
 # PLOT GAUSSIAN (with covariance matrices)
 # set up on each cluster
-
-
-# Train again the GMM if the clusters are note
-# well defined 
 plot_gmm(Z_sampling, 0, 
          'Gaussian Mixture', 
          model=gmm)
+
+# Train again the GMM if the clusters are note
+# well defined 
 
 

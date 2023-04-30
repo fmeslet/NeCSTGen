@@ -39,15 +39,13 @@ import tensorflow as tf
 # Sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from sklearn.manifold import TSNE
 from sklearn import preprocessing
-from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.mixture import GaussianMixture
 
 # Tensorflow
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.datasets import cifar10
 
 # Personnal functions
 # import functions
@@ -103,15 +101,6 @@ def transform_packet_bit_int(packet_bit):
         packet_int.append(int(packet_bit_str, 2))
     return packet_int
 
-from sklearn.cluster import KMeans, DBSCAN
-from itertools import groupby
-from sklearn.neighbors import KernelDensity
-
-
-from sklearn.cluster import KMeans, DBSCAN
-from itertools import groupby
-from sklearn.neighbors import KernelDensity
-
 class Generator():
     def __init__(self, vae, 
                  limit_predict):
@@ -121,54 +110,6 @@ class Generator():
         self.limit_predict = limit_predict
         self.seq_labels = None
         self.seq_labels_ravel = None
-        
-    ################
-    # FIT FUNCTION
-    ################
-    
-    def fit_kmeans(self, X, 
-                   n_clusters=16):
-        km = KMeans(n_clusters=n_clusters, 
-                             random_state=42)
-        self.dict_algo['kmeans'] = km
-        km.fit(X)
-        
-    def fit_kde(self, X):
-        kd = KernelDensity()
-        self.dict_algo['kde'] = kd
-        
-    def fit_dbscan(self, X, 
-                   eps=0.25, 
-                   min_samples=2):
-        db = DBSCAN(eps=eps, 
-                    min_samples=min_samples)
-        self.dict_algo['dbscan'] = db
-        self.dict_algo['dbscan'].fit(X)
-        
-    def fit_gmm(self, X, 
-                n_components=70, 
-                weight_concentration_prior=1000,
-                max_iter=100):
-        gmm = BayesianGaussianMixture(n_components=n_components,
-                              weight_concentration_prior=weight_concentration_prior,
-                              covariance_type='full',
-                              init_params='kmeans',
-                              max_iter=max_iter)
-        self.dict_algo['gmm'] = gmm
-        self.dict_algo['gmm'].fit(X)
-        
-    ####################
-    # PREDICT FUNCTION
-    ####################
-        
-    def predict_kmeans(self, X):
-        return self.dict_algo['kmeans'].predict(X)
-    
-    def predict_dbscan(self, X):
-        return self.dict_algo['dbscan'].predict(X)
-    
-    def predict_gmm(self, X):
-        return self.dict_algo['gmm'].predict(X)
         
     ########################
     # PLOT CLUSTER FUNCTION
@@ -422,12 +363,23 @@ def standardize(x, min_x, max_x, a, b):
     x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
     return x_new
 
-def gen_seq_labels(generator, 
-                   limit_gmm,
+def gen_seq_labels(generator,
                    df_raw,
                    start_idx,
                    end_idx,
                    forward_steps=2):
+    """Fit the transition matrix.
+
+    Args:
+        generator (Generator): _description_
+        df_raw (pd.DataFrame): _description_
+        start_idx (int): _description_
+        end_idx (int): _description_
+        forward_steps (int, optional): Number of steps used to condition the transition matrix. Defaults to 2.
+
+    Returns:
+        _type_: _description_
+    """
     
     seq_true = []
         
@@ -439,7 +391,8 @@ def gen_seq_labels(generator,
 
     # Generate series
     generator.fit_generator(
-        seq_labels=seq_true, forward_steps=forward_steps)
+        seq_labels=seq_true, 
+        forward_steps=forward_steps)
 
     return generator
 
@@ -455,11 +408,7 @@ def gen_pcap(model,
              filename="test_1_bis.pcap"):
 
     # Get PCAP generation
-    timesteps = 11 #11
-    limit_gmm = 4 # Limit des GMM au début et à la fin !
-    num_df_feat = len(columns) + 1 # Add flow part information
-    num_arr_feat = 0 # A changer !
-    num_feat = num_df_feat + num_arr_feat
+    timesteps = 11 # 11
 
     if (nb_packet_gen is None):
         update_nb_packet_gen = True
@@ -469,7 +418,6 @@ def gen_pcap(model,
     # Get label sequence
     # *2 pour bloc_length_gen pour eviter les problème de paquet bizarre au début...
     generator = gen_seq_labels(generator=generator,
-                               limit_gmm=limit_gmm,
                                df_raw=df_raw,
                                start_idx=start_idx,
                                end_idx=end_idx,
@@ -480,7 +428,7 @@ def gen_pcap(model,
     seq_pred = []
 
     if (update_nb_packet_gen):
-        nb_packet_gen = end_idx-start_idx
+        nb_packet_gen = end_idx - start_idx
 
     #print("[DEBUG][gen_pcap] flow_length_gen : ", flow_length_gen)
 
@@ -527,8 +475,10 @@ def gen_pcap(model,
     #print("[DEBUG][gen_pcap] inputs shape : ", inputs.shape)
 
     df_ts_tmp = write_to_pcap(model=model,
-                          inputs=inputs, df_raw=df_raw[columns],
-                          df_feat=df_feat, num_packets=num_packets,
+                          inputs=inputs, 
+                          df_raw=df_raw[columns],
+                          df_feat=df_feat, 
+                          num_packets=num_packets,
                           filename=filename)
     #df_ts_tmp['flow_id'] = i
     df_ts_tmp = df_ts_tmp.iloc[
@@ -540,28 +490,20 @@ def gen_pcap(model,
     return seq_pred, df_ts
 
 
-
-#from scapy.utils import PcapWriter
-#from scapy.layers import *
-
 def write_to_pcap(model, inputs, df_feat, df_raw,
                   num_packets, filename="test.pcap"):
     
     
     timesteps = inputs.shape[1]
     num_df_feat = df_feat.shape[-1]
-    num_feat = inputs.shape[-1]
-    num_arr_feat = num_feat - num_df_feat
     
-    #timesteps = inputs.shape[1]
-    #num_feat = inputs.shape[-1]
     inputs = inputs.copy()
     
     count_all_vae = []
     timesteps_all_vae = []
     time_diff_all_vae = []
     
-    # Ajout des inputs
+    # Creat padding for first random flows
     # It's not important if timesteps are 0 at the beginning
     timesteps_all_vae.extend([0]*timesteps)
     time_diff_all_vae.extend([0]*timesteps)
@@ -574,7 +516,6 @@ def write_to_pcap(model, inputs, df_feat, df_raw,
         inputs = inputs[0:1, -timesteps:, :]
         
         gc.collect()
-        
         
         #columns = ['flow_id_count', 'length_total_sum',
         #           'time_diff', 'rate', 'length_total_std',
@@ -625,7 +566,6 @@ def write_to_pcap(model, inputs, df_feat, df_raw,
                                 "time_diff" : time_diff_all_vae,
                                  "timesteps" : timesteps_all_vae})
     return data_return
-
 
 
 def train_val_test_split(X, y, random_state, train_size=0, 
@@ -703,32 +643,14 @@ class Processing():
                 max_x=self.df_process[col].max(), a=0, b=1)
             
         return le
-            
-    #def reverse_transform_le(self, col, normalize, le):
-    #    self.df_process[col] = le.inverse_transform(self.df_process[col])
-    #    
-    #    if (normalize):
-    #        self.df_process[col] = standardize(
-    #          self.df_process[col], min_x=self.df_process[col].min(),
-    #            max_x=self.df_process[col].max(), a=0, b=1)
               
-    # self.dict_map_layers_0[k]
     
     def process(self, normalize=True):
-        #self.df_process['time_diff'] = self.df_raw['timestamps'].diff(1)
-        #self.df_process['time_diff'] = self.df_process['time_diff'].fillna(0)
-        # We set it to default array !
-        #self.df_raw['time_diff'] = self.df_process['time_diff']
         
         for col in self.columns_add:
             self.df_process[col] = standardize(
                   self.df_process[col], min_x=self.df_process[col].min(),
                    max_x=self.df_process[col].max(), a=0, b=1)
-        #self.df_process = self.df_process.drop(['timestamps'], axis=1)
-      
-        #self.df_process["length_total"] = standardize(
-        #      self.df_process["length_total"], min_x=self.df_process["length_total"].min(),
-        #       max_x=self.df_process["length_total"].max(), a=0, b=1)
           
         if (('sport' in self.columns_enc) and ('dport' in self.columns_enc)):
             for col in ['sport', 'dport']:
@@ -808,7 +730,6 @@ class Processing():
 #################
 
 
-
 data_raw = pd.read_csv(f"DATA/PROCESS/df_raw_flows_{PROTO}.csv")
 data = pd.read_csv(f"DATA/PROCESS/df_process_flows_{PROTO}.csv")
 
@@ -832,7 +753,7 @@ for c in  ['flow_id_count', 'length_total_sum',
 
     inf_val = df_raw[c].iloc[1:].mean()
     
-    df_raw.replace( # Imputation par la moyenne
+    df_raw.replace( # Mean imputation
         -np.inf, inf_val, inplace=True)
     
 df_raw = df_raw.fillna(0)
@@ -848,18 +769,19 @@ data = processing.df_process.fillna(0)
 
 
 ###################
-# ADD LSTM
+# LOAD GMM
 ###################
 
 # Note pretty small error to correct...
 if((PROTO == "UDP_GOOGLE_HOME") or (PROTO == "TCP_GOOGLE_HOME")):
-    X = data[['time_diff', 'flow_id_count']].values
+    X = data[['time_diff', 
+              'flow_id_count']].values
 else:
     X = data[['flow_id_count',
               'time_diff']].values
 
 gmm = joblib.load(f"{MODELS_DIR}gmm_{FULL_NAME}_{PROTO}_FLOWS_FINAL.sav")
-seq_labels = gmm.predict(X)
+seq_labels = gmm.predict(X) # Generate clusters sequence
 
 df_concat = pd.DataFrame()
 df_concat['cluster'] = seq_labels
@@ -876,7 +798,7 @@ generator.gmm = gmm
 #############################################
 
 
-nb_packet_gen = 10000 # e.q to packet when flo are not present
+nb_packet_gen = 10000 # e.q to packet when flow are not present
 
 result = gen_pcap(model=None,
                   df_raw=df_raw.copy(),

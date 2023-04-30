@@ -1,5 +1,5 @@
 ======================================================================================
-NeCSTGen: An approach for realistic network traffic generation using Deep Learning
+NeCSTGen: An approach For Realistic Network Traffic Generation Using Deep Learning
 ======================================================================================
 
 Summary

@@ -57,26 +57,6 @@ tf.keras.backend.set_floatx('float64')
 # USEFULL CLASS/FUNCTIONS
 #############################################
 
-def train_val_test_split(X, y, random_state, train_size=0, 
-                         val_size=0, test_size=0):
-    
-    # Prendre le cas de la stratification
-    # Prendre en cmpte la spération...
-    X = np.arange(0, X.shape[0])
-    y = np.arange(0, y.shape[0])
-    train_idx, val_idx, _, _ = sklearn.model_selection.train_test_split(X, y,
-                                random_state=random_state, test_size=1-train_size, 
-                                shuffle=True) # , stratify=y
-
-    # Get data test from val
-    X = X[val_idx]
-    y = y[val_idx]
-    val_idx, test_idx, _, _ = sklearn.model_selection.train_test_split(X, y,
-                                random_state=random_state, test_size=0.5, 
-                                shuffle=True)
-    
-    return train_idx, val_idx, test_idx
-
 def create_windows(data, window_shape, step = 1, start_id = None, end_id = None):
     
     data = np.asarray(data)
@@ -298,8 +278,10 @@ data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS # A AUGMENTER !
 
+# Extract usefull columns inside the data
 X = data[columns].values
 
+# Split the data
 X_seq = create_windows(X, window_shape=look_back, end_id=-look_ahead)
 X_idx = np.arange(0, X_seq.shape[0])
 X_train_idx, X_val_idx, _, _ = sklearn.model_selection.train_test_split(X_idx, X_idx,
