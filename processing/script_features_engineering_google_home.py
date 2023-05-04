@@ -17,6 +17,24 @@ SAVE_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/GOOGLE_HOME/media_pcap_an
 #######################
 
 
+# From : https://stats.stackexchange.com/questions/178626/how-to-normalize-data-between-1-and-1
+def standardize(x, min_x, max_x, a, b):
+    """Standardize data between the range of [a, b].
+
+    Args:
+        x (np.array): Data to standardize.
+        min_x (int): Minimum value for standardize.
+        max_x (int): Maximum value for standardize.
+        a (int): Lower limit of the range.
+        b (int): Upper limit of the range.
+
+    Returns:
+        np.array: Data standardize.
+    """
+    # x_new in [a, b]
+    x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
+    return x_new
+
 def load_data():
     
     df_week1_monday = pd.read_csv(f"{MAIN_DIR}df_week1_monday_flows.csv")
@@ -187,13 +205,6 @@ def load_data():
 #######################
 
 
-# From : https://stats.stackexchange.com/questions/178626/how-to-normalize-data-between-1-and-1
-def standardize(x, min_x, max_x, a, b):
-    # x_new in [a, b]
-    x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
-    return x_new
-
-
 class Processing():
     def __init__(self, df, arr, columns_enc=['layers_0', 'layers_1', 
                                        'layers_2', 'layers_3', 
@@ -234,7 +245,7 @@ class Processing():
         # We set it to default array !
         #self.df_raw['time_diff'] = self.df_process['time_diff']
         
-        for col in tqdm(self.columns_add):
+        for col in self.columns_add:
             self.df_process[col] = functions.standardize(
                   self.df_process[col], min_x=self.df_process[col].min(),
                    max_x=self.df_process[col].max(), a=0, b=1)
@@ -249,7 +260,7 @@ class Processing():
                 condition_sport = (self.df_process[col] < 1024)
                 self.df_process.loc[~condition_sport, col] = 0
             
-        for col in tqdm(self.columns_enc):
+        for col in self.columns_enc:
             self.transform_le(
                 col=col, normalize=True)
 
@@ -355,6 +366,7 @@ processing.df_process = processing.df_process.fillna(0)
 
 list_files = os.listdir(DATA_DIR_REF)
 df_result = pd.DataFrame()
+
 
 for f in list_files:
   FILENAME = f

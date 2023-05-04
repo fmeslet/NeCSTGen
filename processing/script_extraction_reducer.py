@@ -14,6 +14,16 @@ SAVE_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
 
 # Aggregate file
 def aggregate_df_file(filename, path, file_type='.txt'):
+  """Aggregate the DataFrame generated.
+
+  Args:
+      filename (str): File with filename inside to load and concat with others.
+      path (str): Folder to load the file named filename.
+      file_type (str, optional): Filter for the file extension. Defaults to '.txt'.
+
+  Returns:
+      pandas.DataFrame: DataFrame with the DataFrame concatenate.
+  """
   df = pd.DataFrame()
   for f in os.listdir(path):
     print(f)

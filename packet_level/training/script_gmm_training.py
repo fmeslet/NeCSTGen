@@ -5,6 +5,10 @@
 # IMPORTATIONS
 #############################################
 
+# Avoid bugs
+from itertools import groupby
+from collections import *
+
 # Garbage collector
 import gc
 
@@ -56,11 +60,46 @@ tf.keras.backend.set_floatx('float64')
 #############################################
 
 
+def create_windows(data, window_shape, step = 1, start_id = None, end_id = None):
+    """Apply sliding window on the data and reshape it.
+
+    Args:
+        data (np.array): the data.
+        window_shape (int): size of the window applied on data.
+        step (int, optional): apply the sliding. Defaults to 1.
+        start_id (int, optional): first inex inside the data to start the sliding windos. Defaults to None.
+        end_id (_type_, optional): end index inside the data to stop the sliding window. Defaults to None.
+
+    Returns:
+        np.array: the data sliced format to a matrix.
+    """
+    
+    data = np.asarray(data)
+    data = data.reshape(-1,1) if np.prod(data.shape) == max(data.shape) else data
+        
+    start_id = 0 if start_id is None else start_id
+    end_id = data.shape[0] if end_id is None else end_id
+    
+    data = data[int(start_id):int(end_id),:]
+    window_shape = (int(window_shape), data.shape[-1])
+    step = (int(step),) * data.ndim
+    slices = tuple(slice(None, None, st) for st in step)
+    indexing_strides = data[slices].strides
+    win_indices_shape = ((np.array(data.shape) - window_shape) // step) + 1
+    
+    new_shape = tuple(list(win_indices_shape) + list(window_shape))
+    strides = tuple(list(indexing_strides) + list(data.strides))
+    
+    window_data = np.lib.stride_tricks.as_strided(data, shape=new_shape, strides=strides)
+    
+    return np.squeeze(window_data, 1)
+
+
 class Sampling(layers.Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
 
     Args:
-        layers (_type_): _description_
+        layers (tf.keras.layers.Layer): layers class.
     """
     def build(self, input_shape):
         super(Sampling, self).build(input_shape)
@@ -248,15 +287,14 @@ def build_decoder_dense(nb_feat, input_shape):
     return decoder
 
 
-def plot_gmm(X, index, title, s=.8, model):
+def plot_gmm(X, title, model, s=.8):
     """Plot data with the covariances matrices associate 
     to each clusters define the Gaussian Mixture Model (GMM). 
 
     Args:
         X (numpy.array): Data to plot.
-        index (_type_): 
         title (string): Title of the plot.
-        model (_type_): _description_
+        model (sklearn.mixture): Clustering model (Gaussian Mixture Model).
         s (float, optional): Size of the point inside the scatter plot. Defaults to .8.
     """
     means = model.means_
@@ -336,10 +374,6 @@ elif ((PROTO == "LORA_10") or
 data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/df_raw_{PROTO}.csv")
 data = pd.read_csv(f"{MAIN_DIR}PROCESS/df_process_{PROTO}.csv")
 
-# If data come from darpa dataset
-#condition_app = (data_raw["applications"] == PROTO)
-#index = data_raw[condition_app].index.values
-
 look_back = TIMESTEPS
 look_ahead = TIMESTEPS
 
@@ -383,15 +417,12 @@ Z_sampling = Sampling()([z_mean, z_log_var]).numpy()
 # VISUALIZE THE LATENT SPACE
 
 
-
 # Visualize the various cluster
 # fig, ax = plt.subplots(1, 1, figsize=(7, 7))
 # ax.scatter(x=Z_sampling[:, 0], y=Z_sampling[:, 1], s=0.1)
 
 
-
 # TRAIN GMM
-
 
 
 # Apply mean init if cluster
@@ -419,7 +450,7 @@ seq_labels = gmm.predict(Z_sampling)
 
 # PLOT GAUSSIAN (with covariance matrices)
 # set up on each cluster
-plot_gmm(Z_sampling, 0, 
+plot_gmm(Z_sampling,
          'Gaussian Mixture', 
          model=gmm)
 

@@ -60,6 +60,18 @@ tf.keras.backend.set_floatx('float64')
 
 
 def create_windows(data, window_shape, step = 1, start_id = None, end_id = None):
+    """Apply sliding window on the data and reshape it.
+
+    Args:
+        data (np.array): the data.
+        window_shape (int): size of the window applied on data.
+        step (int, optional): apply the sliding. Defaults to 1.
+        start_id (int, optional): first inex inside the data to start the sliding windos. Defaults to None.
+        end_id (_type_, optional): end index inside the data to stop the sliding window. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     
     data = np.asarray(data)
     data = data.reshape(-1,1) if np.prod(data.shape) == max(data.shape) else data
@@ -83,7 +95,11 @@ def create_windows(data, window_shape, step = 1, start_id = None, end_id = None)
 
 
 class Sampling(layers.Layer):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
+
+    Args:
+        layers (tf.keras.layers.Layer): layers class.
+    """
     def build(self, input_shape):
         super(Sampling, self).build(input_shape)
 
@@ -96,6 +112,11 @@ class Sampling(layers.Layer):
     
     
 class VAE(keras.Model):
+    """Class which define a Beta Variational Autoencoder.
+
+    Args:
+        keras (tensorflow.keras.Model): Keras model.
+    """
     def __init__(self, encoder, decoder, gamma=0.5, **kwargs):
         super(VAE, self).__init__(**kwargs)
         self.encoder = encoder
@@ -117,6 +138,15 @@ class VAE(keras.Model):
         ]
 
     def call(self, inputs):
+        """Send the data at input and give back the output of the model.
+
+        Args:
+            inputs (numpy.array): Data give as input of the model.
+
+        Returns:
+            numpy.array: Data give as output of the model.
+            Reconstruction of the input data. 
+        """
         # ONLY FOR LSTM
         data_input = inputs#[0]
         #data_shift = inputs[1]
@@ -149,6 +179,14 @@ class VAE(keras.Model):
         return reconstruction_raw
 
     def train_step(self, data):
+        """Perform the backpropagation during the training and send back the performance obtained.
+
+        Args:
+            data (numpy.array): Data give as input of the model for training.
+
+        Returns:
+            dict: The name of the metrics used (keys) and the values obtained (values).
+        """
         if isinstance(data, tuple):
             data = data[0]
 
@@ -202,9 +240,17 @@ class VAE(keras.Model):
         }
     
 def build_encoder_dense(nb_feat, input_shape):
+    """Create an encoder for a Variational Autoencoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space.
+        input_shape (tuple): Shape of the input layer.
+
+    Returns:
+        tensorflow.Keras.Model: The encoder model. 
+    """
     latent_dim = nb_feat#50*nb_feat
     encoder_inputs_0 = keras.Input(shape=(input_shape,))
-    #x = layers.Flatten()(encoder_inputs_0)
     x = encoder_inputs_0
 
     x = layers.Dense(8, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
@@ -218,6 +264,15 @@ def build_encoder_dense(nb_feat, input_shape):
     return encoder
 
 def build_decoder_dense(nb_feat, input_shape):
+    """Create a decoder for a Variational AutoEncoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space. 
+        input_shape (tuple): Shape of the input layers.
+
+    Returns:
+        tensorflow.Keras.Model: The decoder model.
+    """
     latent_dim = nb_feat#50*nb_feat
     latent_inputs = keras.Input(shape=(latent_dim,))
 
@@ -242,7 +297,7 @@ def build_decoder_dense(nb_feat, input_shape):
 
 
 
-# If data come from darpa dataset
+# If data come from DARPA dataset
 if (PROTO in ["HTTP", "SMTP", "DNS", "SNMP"]):
 
     columns = ['layers_2', 'layers_3', 'layers_4', 'layers_5', 'flags', 'sport',

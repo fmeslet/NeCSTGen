@@ -10,7 +10,6 @@ import numpy as np
 from scapy.all import rdpcap, TCP, UDP, IP, Padding, Raw, load_layer, Ether, CookedLinux, PcapReader
 
 load_layer("http")
-#load_layer("https")
 
 FILENAME = "week3_friday.tcpdump"
 
@@ -20,17 +19,38 @@ SAVE_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
 
 
 class Preprocessing():
+  """Process a PCAP into DataFrame.
+  """
 
   def __init__(self, lengths):
+    """Init method.
+
+    Args:
+        lengths (int): Maximal packet length.
+    """
     self.df = pd.DataFrame() # set les columns avec les types et check la memoires.
     self.lengths = lengths
     self.filename = ""
 
   def reduce_memory_df(self, df):
-    # Set type for each columns
+    """Reduce the memory print of a DataFrame. For exemple, 
+    by changing the type of float to integer.
+
+    Args:
+        df (pandas.DataFrame): DataFrame to reduced.
+
+    Returns:
+        pandas.DataFrame: DataFrame with a memory print reduced.
+    """
+    pass
     return df
 
   def add_df(self, feat_dict):
+    """Transform dictionnary as input to DataFrame.
+
+    Args:
+        feat_dict (dict): Hash map to transform to DataFrame.
+    """
     layers_df = pd.DataFrame(feat_dict, index=[0])
     #print(layers_df)
     layers_df_reduced = self.reduce_memory_df(layers_df)
@@ -45,12 +65,27 @@ class Preprocessing():
     print(f"DataFrame {counter} saved, file {self.filename} !")
 
   def init_iterateur(self, iterator, value):
+    """Set iterator to the right starting index.
+
+    Args:
+        iterator (scapy.PcapReader): Scapy PCAP iterator.
+        value (int): Value to set the iterator.
+    """
     i = 0
     while (i < value):
       iterator.next()
       i += 1
 
   def extract_features(self, packet, num_packet):
+    """Features to extract.
+
+    Args:
+        packet (int): Packet number.
+        num_packet (_type_): _description_
+
+    Returns:
+        dict: Hash map containing all the 
+    """
     feat_dict = {}
 
     # Extract layers
@@ -104,10 +139,20 @@ class Preprocessing():
 
     feat_dict['filename'] = self.filename
     feat_dict['num_packet'] = num_packet
+
     return feat_dict
 
 
   def fit(self, filename="", start=0, inter=1):
+    """Extract all packet features of a PCAP at a specific 
+    index range. Each index is associated to the packet rank
+    inside the PCAP.
+
+    Args:
+        filename (str, optional): PCAP filename. Defaults to "".
+        start (int, optional): Start index. Defaults to 0.
+        inter (int, optional): End ind. Defaults to 1.
+    """
     self.filename = filename
     iterator = PcapReader(DATA_PATH)
     i = start # Packet counter
@@ -129,7 +174,7 @@ class Preprocessing():
       # Concat to  df
       self.add_df(feat_dict=feat_dict)
 
-      # On incrémente le compteur 
+      # Increment the counter 
       i += 1
       j += 1
       
@@ -142,6 +187,14 @@ class Preprocessing():
 
 
   def get_layers(self, packet):
+    """Get name of each layer inside a packet.
+
+    Args:
+        packet (_type_): The packet to analyze.
+
+    Returns:
+        list: List of string representing the names.
+    """
     layer = []
     for i in packet.layers():
       name = str(i).split('.')[-1][:-2]
@@ -149,7 +202,9 @@ class Preprocessing():
     return layer
 
 
+# Process the data
+
 preprocessing = Preprocessing(lengths=1514*8)
 # start=1001
-# On génère à partir du 1001 paquets on compte à partir de 0 donc on a 0 à 999 en numéro
-preprocessing.fit(filename=FILENAME, start=0, inter=2000) # 180000
+# Generation step by step to avoid overflow
+preprocessing.fit(filename=FILENAME, start=0, inter=2000)

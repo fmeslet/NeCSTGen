@@ -611,11 +611,15 @@ def write_to_pcap(model, dict_flags,
                   inputs, df_feat, df_raw,
                   num_packets, filename="test.pcap"):
 
+    # Some parameters for building a packet
+    ## IP address
     src_ip = "19.168.1.12"
     dst_ip = "8.8.8.8"
 
-    src_port = 10345
-    dst_port = 80
+    ## Some ports. The direction define which is the
+    ## source and the destination
+    port_a = 10345
+    port_b = 80
 
     #pcap = PcapWriter(
     #    filename, append = True, sync = False)
@@ -623,8 +627,6 @@ def write_to_pcap(model, dict_flags,
     timesteps = inputs.shape[1]
     #print("[DEBUG][write_to_pcap] timesteps : ", timesteps)
     num_df_feat = df_feat.shape[-1]
-    num_feat = inputs.shape[-1]
-    num_arr_feat = num_feat - num_df_feat
 
     inputs = inputs.copy()
     
@@ -673,8 +675,7 @@ def write_to_pcap(model, dict_flags,
 
         gc.collect()
 
-        # Get data
-        # +2 pour ajouter timesteps et num_feats
+        # Extract VAE features
         
         if ("TCP_GOOGLE_HOME" in PROTO):
             pred_raw = model.predict([inputs, np.zeros((1, 12))]) # /!\ !!!!
@@ -700,13 +701,14 @@ def write_to_pcap(model, dict_flags,
 
         flags_length = len(dict_flags.values())
         
+        # Extract LSTM features
+
         flags_raw = pred_raw[:, :flags_length][0]
         direction_raw = pred_raw[:, flags_length][0]
         length_raw_lstm = pred_raw[:, flags_length+1][0]
         header_length_raw_lstm = pred_raw[:, flags_length+2][0]
         time_raw_lstm = pred_raw[:, flags_length+3][0]
         
-
         # GET FLAGS
         flags = np.argmax(flags_raw, axis=-1)
         flags = dict_flags[flags]
@@ -753,7 +755,7 @@ def write_to_pcap(model, dict_flags,
         #        (1000000000 if pcap.nano else 1000000)))
         
         # SAVE PAYLOAD LENGTH
-        payload_length_vae = standardize( # A CHANGER !! C'est SALE !
+        payload_length_vae = standardize( 
                        payload_length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['payload_length'].min(),
                        b=df_raw['payload_length'].max())
@@ -764,7 +766,7 @@ def write_to_pcap(model, dict_flags,
         
 
         # SAVE PACKET LENGTH
-        length_lstm = standardize( # A CHANGER !! C'est SALE !
+        length_lstm = standardize(
                        length_raw_lstm, min_x=0, # +timesteps
                        max_x=1, a=df_raw['length_total'].min(),
                        b=df_raw['length_total'].max())
@@ -773,7 +775,7 @@ def write_to_pcap(model, dict_flags,
 #        length_lstm = length_lstm[0]
         length_all_lstm.append(length_lstm)
         
-        length_vae = standardize( # A CHANGER !! C'est SALE !
+        length_vae = standardize(
                        length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['length_total'].min(),
                        b=df_raw['length_total'].max())
@@ -783,7 +785,7 @@ def write_to_pcap(model, dict_flags,
         length_all_vae.append(length_vae)
 
         # SAVE HEADER LENGTH
-        header_length_lstm = standardize( # A CHANGER !! C'est SALE !
+        header_length_lstm = standardize(
                        header_length_raw_lstm, min_x=0, # +timesteps
                        max_x=1, a=df_raw['header_length'].min(),
                        b=df_raw['header_length'].max())
@@ -792,7 +794,7 @@ def write_to_pcap(model, dict_flags,
 #        header_length_lstm = header_length_lstm[0]
         header_length_all_lstm.append(header_length_lstm)
         
-        header_length_vae = standardize( # A CHANGER !! C'est SALE !
+        header_length_vae = standardize(
                        header_length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['header_length'].min(),
                        b=df_raw['header_length'].max())
@@ -807,7 +809,6 @@ def write_to_pcap(model, dict_flags,
              " // direction : ", direction,
              " // header_length : ", header_length)'''
     
-    
         # Update the inputs with the prediction
         next_input = np.reshape(df_feat[i], (1, 1, num_df_feat))
         inputs = np.concatenate(
@@ -816,9 +817,7 @@ def write_to_pcap(model, dict_flags,
         #print("[DEBUG][write_to_pcap] next_input shape : ", next_input.shape)
         #print("[DEBUG][write_to_pcap] inputs shape : ", inputs.shape)
 
-        # On bloque l'écriture de chose bizarre au début...
-        # *2 car on démarre à partir de timesteps
-        #if(i >= timesteps*2):
+        # Build the header and write into *pcap file
         #pcap._write_header(pred_packet)
         #pcap._write_packet(pred_packet, sec=sec, usec=usec)
 
@@ -999,6 +998,15 @@ class VAE(keras.Model):
         }
     
 def build_encoder_dense(nb_feat, input_shape):
+    """Create an encoder for a Variational Autoencoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space.
+        input_shape (tuple): Shape of the input layer.
+
+    Returns:
+        tensorflow.Keras.Model: The encoder model. 
+    """
     latent_dim = nb_feat#50*nb_feat
     encoder_inputs_0 = keras.Input(shape=(input_shape,))
     #x = layers.Flatten()(encoder_inputs_0)
@@ -1015,6 +1023,15 @@ def build_encoder_dense(nb_feat, input_shape):
     return encoder
 
 def build_decoder_dense(nb_feat, input_shape):
+    """Create a decoder for a Variational AutoEncoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space. 
+        input_shape (tuple): Shape of the input layers.
+
+    Returns:
+        tensorflow.Keras.Model: The decoder model.
+    """
     latent_dim = nb_feat#50*nb_feat
     latent_inputs = keras.Input(shape=(latent_dim,))
 

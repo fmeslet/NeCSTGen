@@ -150,8 +150,6 @@ def load_data():
             df_rate['datetime'] = df_rate['timestamps'].map(map_time)
             df_rate = df_rate.set_index('datetime')#.sort_index()
 
-            #df["rate_byte_sec"] = df_rate['length_total'].resample(
-            #    '1s').sum().reset_index(drop=True)
 
             df.loc[condition_app, "rolling_rate_byte_sec"] = df_rate['length_total'].rolling(
                 '1s').sum().values#.reset_index(drop=True)
@@ -172,11 +170,6 @@ def load_data():
                 df.loc[condition, "header_length"] = df[
                         condition]["length_total"] - df[condition][f"length_{i-1}"]
         df["payload_length"] = df["length_total"] - df["header_length"]
-
-        #condition_ports = ((df['sport'] == 25) | 
-        #                   (df['dport'] == 25))
-        #arr = arr[df[condition_ports].index.values]
-        #df = df[condition_ports].reset_index(drop=True)
     
     return arr, df
 

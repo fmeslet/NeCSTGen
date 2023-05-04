@@ -37,10 +37,10 @@ import tensorflow as tf
 
 # Sklearn
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-from sklearn.manifold import TSNE
 from sklearn import preprocessing
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.cluster import KMeans, DBSCAN
+from itertools import groupby
 
 # Tensorflow
 from tensorflow import keras
@@ -88,25 +88,6 @@ tf.keras.backend.set_floatx('float64')
 # USEFULL CLASS/FUNCTIONS
 #############################################
 
-def transform_packet_int_bytes(packet_int):
-    packet_bytes = [(int(packet_int[i])).to_bytes(1, byteorder='big') for i in range(packet_int.shape[0])]
-    #packet_bytes_array = np.array(packet_int)
-
-    #packet_int_array_pad = np.reshape(packet_int_array_pad, (1536, 1))
-    return packet_bytes
-
-def transform_packet_bit_int(packet_bit):
-    packet_int = []
-    for i in range(8, len(packet_bit)+1, 8):
-        packet_bit_str = packet_bit[i-8:i].astype(str)
-        packet_bit_str = "".join(packet_bit_str)
-        packet_int.append(int(packet_bit_str, 2))
-    return packet_int
-
-
-from sklearn.cluster import KMeans, DBSCAN
-from itertools import groupby
-from sklearn.neighbors import KernelDensity
 
 class Generator():
     def __init__(self, vae, 
@@ -164,17 +145,7 @@ class Generator():
         #sns.scatterplot(x=X[:, 0], y=X[:, 1], ax=ax, hue=labels)
         ax.set_title("Scatter plot")
     
-    def plot_kmeans(self, X, s=.8):
-        labels = self.predict_kmeans(X)
-        
-        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
-        ax.scatter(x=X[:, 0], y=X[:, 1], 
-                    c=labels, s=s)
-        ax.legend()
-        #sns.scatterplot(x=X[:, 0], y=X[:, 1], ax=ax, hue=labels)
-        ax.set_title("Scatter plot of KMeans")
-        
-    def plot_gmm(self, X, index, title, s=.8):
+    def plot_gmm(self, X, title, s=.8):
         means = self.dict_algo['gmm'].means_
         covariances = self.dict_algo['gmm'].covariances_
         Y_ = self.dict_algo['gmm'].predict(X)
@@ -364,29 +335,6 @@ class Generator():
             i = len(sample_label)
 
         return sample_label
-
-
-
-def transform_packet_bytes_int(packet_bytes, length=1522):
-    packet_int = [int(byte) for byte in packet_bytes]
-    packet_int_array = np.array(packet_int)
-
-    packet_int_array_pad = np.lib.pad(packet_int_array,
-                            (0,length-packet_int_array.shape[0]),
-                            'constant', constant_values=(0))
-
-    packet_int_array_pad = np.reshape(packet_int_array_pad, (length, 1))
-    return packet_int_array_pad
-
-def standardize(x, min_x, max_x, a, b):
-  # x_new in [a, b]
-    x_new = (b - a) * ( (x - min_x) / (max_x - min_x) ) + a
-    return x_new
-
-def transform_packet_bit_bytes(packet_bit):
-    packet_int = np.apply_along_axis(transform_packet_bit_int, 1, packet_bit)
-    packet_bytes = transform_packet_int_bytes(packet_int[0])
-    return packet_bytes
 
 def standardize(x, min_x, max_x, a, b):
   # x_new in [a, b]
@@ -585,9 +533,6 @@ def gen_pcap(model,
     return seq_pred, df_ts, flows_id
 
 
-from scapy.utils import PcapWriter
-from scapy.layers import *
-
 def write_to_pcap(model, dict_flags,
                   inputs, df_feat, df_raw,
                   num_packets, filename="test.pcap"):
@@ -701,6 +646,7 @@ def write_to_pcap(model, dict_flags,
         #print("[DEBUG][write_to_pcap] direction ARGMAX : ", direction)
 
         # SAVE TIME DIFF
+        # Time diff from the LSTM
         time_diff_lstm = standardize(
                        time_raw_lstm, min_x=0, #df_feat[i, -2], min_x=0, #+timesteps au lieu de 8
                        max_x=1, a=df_raw['time_diff'].min(), # [condition_ports] ?
@@ -714,7 +660,7 @@ def write_to_pcap(model, dict_flags,
         timesteps_all_lstm.append(time_lstm)
         timesteps_diff_all_lstm.append(time_diff_lstm[-1])
         
-        
+        # Time diff from the VAE
         time_diff_vae = standardize(
                        time_raw_vae, min_x=0, #df_feat[i, -2], min_x=0, #+timesteps au lieu de 8
                        max_x=1, a=df_raw['time_diff'].min(), # [condition_ports] ?
@@ -728,13 +674,13 @@ def write_to_pcap(model, dict_flags,
         timesteps_all_vae.append(time_vae)
         timesteps_diff_all_vae.append(time_diff_vae[-1])
         
-        
+        # Set timesteps for PCAP
         #sec = int(time)  # type: ignore
         #usec = int(round((time - sec) *  # type: ignore
         #        (1000000000 if pcap.nano else 1000000)))
         
         # SAVE PAYLOAD LENGTH
-        payload_length_vae = standardize( # A CHANGER !! C'est SALE !
+        payload_length_vae = standardize(
                        payload_length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['payload_length'].min(),
                        b=df_raw['payload_length'].max())
@@ -745,7 +691,8 @@ def write_to_pcap(model, dict_flags,
         
 
         # SAVE PACKET LENGTH
-        length_lstm = standardize( # A CHANGER !! C'est SALE !
+        # Packet length from the LSTM
+        length_lstm = standardize(
                        length_raw_lstm, min_x=0, # +timesteps
                        max_x=1, a=df_raw['length_total'].min(),
                        b=df_raw['length_total'].max())
@@ -754,7 +701,8 @@ def write_to_pcap(model, dict_flags,
         length_lstm = length_lstm[0]
         length_all_lstm.append(length_lstm)
         
-        length_vae = standardize( # A CHANGER !! C'est SALE !
+        # PAcket length from the VAE
+        length_vae = standardize(
                        length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['length_total'].min(),
                        b=df_raw['length_total'].max())
@@ -764,7 +712,8 @@ def write_to_pcap(model, dict_flags,
         length_all_vae.append(length_vae)
 
         # SAVE HEADER LENGTH
-        header_length_lstm = standardize( # A CHANGER !! C'est SALE !
+        # Header length from the LSTM
+        header_length_lstm = standardize(
                        header_length_raw_lstm, min_x=0, # +timesteps
                        max_x=1, a=df_raw['header_length'].min(),
                        b=df_raw['header_length'].max())
@@ -773,7 +722,8 @@ def write_to_pcap(model, dict_flags,
         header_length_lstm = header_length_lstm[0]
         header_length_all_lstm.append(header_length_lstm)
         
-        header_length_vae = standardize( # A CHANGER !! C'est SALE !
+        # Header length from the LSTM
+        header_length_vae = standardize(
                        header_length_raw_vae, min_x=0, # +timesteps
                        max_x=1, a=df_raw['header_length'].min(),
                        b=df_raw['header_length'].max())
@@ -800,6 +750,9 @@ def write_to_pcap(model, dict_flags,
         # On bloque l'écriture de chose bizarre au début...
         # *2 car on démarre à partir de timesteps
         #if(i >= timesteps*2):
+
+        # Recreate an header with Scapy and save it 
+        # to a PCAP
         #pcap._write_header(pred_packet)
         #pcap._write_packet(pred_packet, sec=sec, usec=usec)
 
@@ -817,29 +770,19 @@ def write_to_pcap(model, dict_flags,
     return data_return
 
 
-
-def train_val_test_split(X, y, random_state, train_size=0, 
-                         val_size=0, test_size=0):
-    
-    # Prendre le cas de la stratification
-    # Prendre en cmpte la spération...
-    X = np.arange(0, X.shape[0])
-    y = np.arange(0, y.shape[0])
-    train_idx, val_idx, _, _ = sklearn.model_selection.train_test_split(X, y,
-                                random_state=random_state, test_size=1-train_size, 
-                                shuffle=True) # , stratify=y
-
-    # Get data test from val
-    X = X[val_idx]
-    y = y[val_idx]
-    val_idx, test_idx, _, _ = sklearn.model_selection.train_test_split(X, y,
-                                random_state=random_state, test_size=0.5, 
-                                shuffle=True)
-    
-    return train_idx, val_idx, test_idx
-
 def create_windows(data, window_shape, step = 1, start_id = None, end_id = None):
-    
+    """Apply sliding window on the data and reshape it.
+
+    Args:
+        data (np.array): the data.
+        window_shape (int): size of the window applied on data.
+        step (int, optional): apply the sliding. Defaults to 1.
+        start_id (int, optional): first inex inside the data to start the sliding windos. Defaults to None.
+        end_id (_type_, optional): end index inside the data to stop the sliding window. Defaults to None.
+
+    Returns:
+        np.array: the data sliced format to a matrix.
+    """
     data = np.asarray(data)
     data = data.reshape(-1,1) if np.prod(data.shape) == max(data.shape) else data
         
@@ -860,8 +803,13 @@ def create_windows(data, window_shape, step = 1, start_id = None, end_id = None)
     
     return np.squeeze(window_data, 1)
 
+
 class Sampling(layers.Layer):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
+
+    Args:
+        layers (tf.keras.layers.Layer): layers class.
+    """
     def build(self, input_shape):
         super(Sampling, self).build(input_shape)
 
@@ -874,6 +822,11 @@ class Sampling(layers.Layer):
     
     
 class VAE(keras.Model):
+    """Variational Auto Encoder Model.
+
+    Args:
+        keras (tf.keras.Model): model class from Tensorflow.
+    """
     def __init__(self, encoder, decoder, gamma=0.5, **kwargs):
         super(VAE, self).__init__(**kwargs)
         self.encoder = encoder
@@ -888,6 +841,11 @@ class VAE(keras.Model):
 
     @property
     def metrics(self):
+        """Return the metrics used.
+
+        Returns:
+            list: Array of the metrics used.
+        """
         return [
             self.loss_tracker,
             self.reconstruction_loss_tracker,
@@ -895,25 +853,32 @@ class VAE(keras.Model):
         ]
 
     def call(self, inputs):
-        # ONLY FOR LSTM
-        data_input = inputs#[0]
-        #data_shift = inputs[1]
+        """Send the data at input and give back the output of the model.
+
+        Args:
+            inputs (numpy.array): Data give as input of the model.
+
+        Returns:
+            numpy.array: Data give as output of the model.
+            Reconstruction of the input data. 
+        """
+        data_input = inputs
 
         z_mean, z_log_var = self.encoder(data_input)
         z = self.sampling([z_mean, z_log_var])
-        # ONLY FOR LSTM
+
         reconstruction_raw = self.decoder(z)
-        #reconstruction_raw, states = self.decoder([z, data_shift])
         
         reconstruction = tf.reshape(reconstruction_raw, [-1, 1]) # Avant 1 : 200
         data_cont = tf.reshape(data_input, [-1, 1])
 
+        # For categorical and continuous features but combining 
+        # both loss don't improve the performance
         reconstruction_loss_0 = tf.reduce_sum(
                 keras.losses.binary_crossentropy(y_true=data_cont, y_pred=reconstruction), axis=(-1))
         reconstruction_loss_1 = tf.reduce_sum(
                 keras.losses.mean_absolute_error(y_true=data_cont, y_pred=reconstruction), axis=(-1))
         reconstruction_loss = reconstruction_loss_0 + reconstruction_loss_1
-        #reconstruction_loss = reconstruction_loss_1
         
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
         kl_loss = self.gamma * tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
@@ -923,17 +888,21 @@ class VAE(keras.Model):
         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.kl_loss_tracker.update_state(kl_loss)
 
-        #return reconstruction_raw, states
         return reconstruction_raw
 
     def train_step(self, data):
+        """Perform the backpropagation during the training and send back the performance obtained.
+
+        Args:
+            data (numpy.array): Data give as input of the model for training.
+
+        Returns:
+            dict: The name of the metrics used (keys) and the values obtained (values).
+        """
         if isinstance(data, tuple):
             data = data[0]
 
-        #data_input = data[0]
         data_cont = data[0]
-        data_shift = data[1]
-        #data_output = data[2]
         
         with tf.GradientTape() as tape:
 
@@ -942,14 +911,12 @@ class VAE(keras.Model):
 
             z_mean, z_log_var = self.encoder(data_cont)
             z = self.sampling([z_mean, z_log_var])
-            # ONLY FOR LSTM
-            #reconstruction, states = self.decoder([z, data_shift])
+
             reconstruction = self.decoder(z)
-            #reconstruction = reconstruction
             
             #print(tf.shape(reconstruction))
 
-            reconstruction = tf.reshape(reconstruction, [-1, 1]) # Avant 1 : 200
+            reconstruction = tf.reshape(reconstruction, [-1, 1])
             data_cont = tf.reshape(data_cont, [-1, 1])
 
             reconstruction_loss_0 = tf.reduce_sum(
@@ -957,13 +924,11 @@ class VAE(keras.Model):
             reconstruction_loss_1 = tf.reduce_sum(
                     keras.losses.mean_absolute_error(y_true=data_cont, y_pred=reconstruction), axis=(-1))
             reconstruction_loss = reconstruction_loss_0 + reconstruction_loss_1
-            #reconstruction_loss = reconstruction_loss_1
 
             # Loss for first part
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = self.gamma * tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
-
-            total_loss = reconstruction_loss + kl_loss# + kl_loss_output
+            total_loss = reconstruction_loss + kl_loss
 
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -980,9 +945,17 @@ class VAE(keras.Model):
         }
     
 def build_encoder_dense(nb_feat, input_shape):
-    latent_dim = nb_feat#50*nb_feat
+    """Create an encoder for a Variational Autoencoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space.
+        input_shape (tuple): Shape of the input layer.
+
+    Returns:
+        tensorflow.Keras.Model: The encoder model. 
+    """
+    latent_dim = nb_feat
     encoder_inputs_0 = keras.Input(shape=(input_shape,))
-    #x = layers.Flatten()(encoder_inputs_0)
     x = encoder_inputs_0
 
     x = layers.Dense(8, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
@@ -996,14 +969,22 @@ def build_encoder_dense(nb_feat, input_shape):
     return encoder
 
 def build_decoder_dense(nb_feat, input_shape):
-    latent_dim = nb_feat#50*nb_feat
+    """Create a decoder for a Variational AutoEncoder (VAE).
+
+    Args:
+        nb_feat (int): Dimension of the latent space. 
+        input_shape (tuple): Shape of the input layers.
+
+    Returns:
+        tensorflow.Keras.Model: The decoder model.
+    """
+    latent_dim = nb_feat
     latent_inputs = keras.Input(shape=(latent_dim,))
 
     x = layers.Dense(4, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(latent_inputs)
     x = layers.Dense(6, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
     x = layers.Dense(8, activation=tf.keras.layers.LeakyReLU(alpha=0.1))(x)
     decoder_outputs = layers.Dense(input_shape, activation="sigmoid")(x)
-    #decoder_outputs = tf.reshape(x, [-1, 100, nb_feat])
 
     decoder = keras.Model(latent_inputs, outputs=decoder_outputs, name="decoder")
     
@@ -1011,6 +992,11 @@ def build_decoder_dense(nb_feat, input_shape):
 
 
 class Predictor(keras.Model):
+    """LSTM used for generation.
+
+    Args:
+        keras (tf.keras.Model): Model class of Tensorflow.
+    """
     def __init__(self, latent_dim,
                  feat_dim,
                  feat_dim_flags,
@@ -1034,6 +1020,11 @@ class Predictor(keras.Model):
 
     @property
     def metrics(self):
+        """Return the metrics used.
+
+        Returns:
+            list: Array of the metrics used.
+        """
         return [
             self.loss_tracker,
             self.loss_feat_tracker,
@@ -1041,12 +1032,22 @@ class Predictor(keras.Model):
         ]
 
     def call(self, inputs):
+        """Send the data at input and give back the output of the model.
+
+        Args:
+            inputs (numpy.array): Data give as input of the model.
+
+        Returns:
+            numpy.array: Data give as output of the model.
+            Reconstruction of the input data. 
+        """
+        data_input = inputs[0]
         data_output = inputs[1]
 
         #x = self.decoder_inputs(inputs[0])
         #x = self.lstm(x)
 
-        x = self.lstm(inputs[0])
+        x = self.lstm(data_input)
         x = self.flatten(x)
         x_feat = self.decoder_outputs(x)
         x_flags = self.flags_outputs(x)
@@ -1055,9 +1056,9 @@ class Predictor(keras.Model):
             [x_flags, x_feat], axis=-1)
 
         target_flags = tf.slice(
-            inputs[1], [0, 0], [-1, self.feat_dim_flags])
+            data_output, [0, 0], [-1, self.feat_dim_flags])
         target_feat = tf.slice(
-            inputs[1], [0, self.feat_dim_flags], [-1, -1])
+            data_output, [0, self.feat_dim_flags], [-1, -1])
 
         loss_feat = tf.reduce_sum(
                 tf.reduce_sum(
@@ -1081,6 +1082,14 @@ class Predictor(keras.Model):
     
 
     def train_step(self, data):
+        """Perform the backpropagation during the training and send back the performance obtained.
+
+        Args:
+            data (numpy.array): Data give as input of the model for training.
+
+        Returns:
+            dict: The name of the metrics used (keys) and the values obtained (values).
+        """
         if isinstance(data, tuple):
             data = data[0]
 
@@ -1160,32 +1169,13 @@ class Processing():
                 max_x=self.df_process[col].max(), a=0, b=1)
             
         return le
-            
-    #def reverse_transform_le(self, col, normalize, le):
-    #    self.df_process[col] = le.inverse_transform(self.df_process[col])
-    #    
-    #    if (normalize):
-    #        self.df_process[col] = standardize(
-    #          self.df_process[col], min_x=self.df_process[col].min(),
-    #            max_x=self.df_process[col].max(), a=0, b=1)
-              
-    # self.dict_map_layers_0[k]
     
     def process(self, normalize=True):
-        #self.df_process['time_diff'] = self.df_raw['timestamps'].diff(1)
-        #self.df_process['time_diff'] = self.df_process['time_diff'].fillna(0)
-        # We set it to default array !
-        #self.df_raw['time_diff'] = self.df_process['time_diff']
         
         for col in self.columns_add:
             self.df_process[col] = standardize(
                   self.df_process[col], min_x=self.df_process[col].min(),
                    max_x=self.df_process[col].max(), a=0, b=1)
-        #self.df_process = self.df_process.drop(['timestamps'], axis=1)
-      
-        #self.df_process["length_total"] = standardize(
-        #      self.df_process["length_total"], min_x=self.df_process["length_total"].min(),
-        #       max_x=self.df_process["length_total"].max(), a=0, b=1)
           
         if (('sport' in self.columns_enc) and ('dport' in self.columns_enc)):
             for col in ['sport', 'dport']:
@@ -1239,7 +1229,7 @@ class Processing():
         return x_digitize
     
     def reverse_standardize(self, df):
-        # Creer un tableau pour récolter les résultats
+        # Create a table to collect the results
         df_new = pd.DataFrame()
         df_copy = df.copy()
         
@@ -1695,12 +1685,12 @@ result = gen_pcap(model=lstm,
 
 if (FROM_FLOWS_GEN):
     result[1].to_csv(f"{RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}_FROM_FLOWS_GEN_TEST.csv", index=False)
+    print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}_FROM_FLOWS_GEN_TEST.csv")
 else:
     result[1].to_csv(f"{RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv", index=False)
+    print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv")
 
-#result[1].to_csv(f"{RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv", index=False)
 
-print(f"[DEBUG] filename : {RESULTS_DIR}DF_GEN_PACKET_{PROTO}_FLOW_CONNECT{EXT_NAME}.csv")
 print("[DEBUG] result[0] : ", result[0])
 print("[DEBUG] result[1] : ", result[1])
 

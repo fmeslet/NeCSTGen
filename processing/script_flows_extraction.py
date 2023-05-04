@@ -111,6 +111,7 @@ def set_applications(data):
     # Correction for label encoding
     data['applications'] = data['applications'].astype(str)
 
+
 def apply_http_corrections(data):
     # Apply PPTP
     condition_pptp = (data['layers_3'] == "PPTP") & (data['sport'] == 80)

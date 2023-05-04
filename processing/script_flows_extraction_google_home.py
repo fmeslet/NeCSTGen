@@ -2,16 +2,10 @@
 #!/usr/bin/python3
 #-*-coding: utf-8-*-
 
-import scapy_layers
-
 import gc
 import pandas as pd
 import numpy as np
-from scapy.all import rdpcap, TCP, UDP, IP, Padding, Raw, load_layer, Ether, CookedLinux, PcapReader
-from scapy.compat import bytes_encode
 
-load_layer("http")
-#load_layer("https")
 
 FILENAME = "UDP_GOOGLE_HOME"
 APP_LIST = ['ARP', 'LLC', 'LOOP', 'SNAP', 'TELNET', 
@@ -34,24 +28,22 @@ columns = ['ip_src', 'ip_dst', 'sport', 'dport', 'layers_2', 'filename']
 
 data_test = data_raw.copy()
 
-sessions = data_test.groupby( #[condition]
+sessions = data_test.groupby(
     columns).size().reset_index().rename(
     columns={0:'count'})
 
-for i in range(sessions.shape[0]): #result.shape[0]
+for i in range(sessions.shape[0]):
     condition_flow = (((data_test['ip_src'] == sessions['ip_src'].iloc[i]) &
                      (data_test['ip_dst'] == sessions['ip_dst'].iloc[i]) & 
                      (data_test['sport'] == sessions['sport'].iloc[i]) &
                      (data_test['dport'] == sessions['dport'].iloc[i]) &
                      (data_test['layers_2'] == sessions['layers_2'].iloc[i]) &
-                     #(data_test['applications'] == sessions['applications'].iloc[i])) | 
                      (data_test['filename'] == sessions['filename'].iloc[i])) |
                     ((data_test['ip_src'] == sessions['ip_dst'].iloc[i]) &
                      (data_test['ip_dst'] == sessions['ip_src'].iloc[i]) & 
                      (data_test['sport'] == sessions['dport'].iloc[i]) &
                      (data_test['dport'] == sessions['sport'].iloc[i]) &
                      (data_test['layers_2'] == sessions['layers_2'].iloc[i]) &
-                     #(data_test['applications'] == sessions['applications'].iloc[i])))
                      (data_test['filename'] == sessions['filename'].iloc[i])))
 
     # Add flow id
