@@ -70,7 +70,7 @@ def create_windows(data, window_shape, step = 1, start_id = None, end_id = None)
         end_id (_type_, optional): end index inside the data to stop the sliding window. Defaults to None.
 
     Returns:
-        _type_: _description_
+        np.array: the data sliced format to a matrix.
     """
     
     data = np.asarray(data)

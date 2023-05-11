@@ -40,4 +40,5 @@ df_result = df_result.sort_values(by='num_packet', ascending=True)
 df_result = df_result.reset_index(drop=True)
 df_result.to_csv(f"{SAVE_DIR}df_{num}_{FILENAME}.csv", index=False)
 
-# Supprimer les arrays traités
+# By renaming and moving the files, we obtain the file "df_week1_tuesday.csv"
+# Next step is to identifie flows and protocol !

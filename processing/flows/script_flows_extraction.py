@@ -11,6 +11,7 @@ from scapy.all import rdpcap, TCP, UDP, IP, Padding, Raw, load_layer, Ether, Coo
 from scapy.compat import bytes_encode
 
 load_layer("http")
+#load_layer("https")
 
 FILENAME = "week3_friday"
 APP_LIST = ['ARP', 'LLC', 'LOOP', 'SNAP', 'TELNET', 
@@ -18,21 +19,15 @@ APP_LIST = ['ARP', 'LLC', 'LOOP', 'SNAP', 'TELNET',
             'NTP', 'FTP', 'RIP', 'IRC', 'POP', 'ICMP', 
             'FINGER', 'TIME', "NETBIOS"]
 MAIN_DIR = "/users/rezia/fmesletm/DATA_GENERATION/DATA/"
-RESULTS_DIR = "/users/rezia/fmesletm/DATA_GENERATION/RESULTS/"
 DATA_PATH = MAIN_DIR + FILENAME
-PROTO = "UDP_GOOGLE_HOME"
-TYPE = "GEN"
 
 #############################################
 # Work on flow identified with IP and PORTS
 #############################################
 
-data_raw = pd.read_csv(f"{RESULTS_DIR}DF_{PROTO}_FINAL_4.csv")
-#data_raw = pd.read_csv(f"{MAIN_DIR}PROCESS/df_raw_{PROTO}.csv")
+data_raw = pd.read_csv(f"{MAIN_DIR}df_{FILENAME}.csv")
 #data_test = data_raw.copy()
 columns = ['ip_src', 'ip_dst', 'sport', 'dport', 'applications']
-
-print("COLUMNS : ", data_raw.columns)
 
 def set_applications(data):
 
@@ -181,12 +176,10 @@ data_raw.loc[data_raw['flags'].isna(), 'flags'] = 0
 data_raw.loc[data_raw['sport'].isna(), 'sport'] = 0
 data_raw.loc[data_raw['dport'].isna(), 'dport'] = 0
 
-
-if(PROTO == "HTTP"):
-    try:
-        apply_http_corrections(data_raw)
-    except:
-        pass
+try:
+    apply_http_corrections(data_raw)
+except:
+    pass
 
 set_applications(data_raw)
 
@@ -226,7 +219,7 @@ flows = data_test[
 #    condition_flow_id = (data_test['flow_id'] == flow_id)
 #    data_test.loc[condition_flow_id, "flow_id"] = i
 
-data_test.to_csv(f"{RESULTS_DIR}DF_{TYPE}_FLOWS_{PROTO}_FINAL_TMP.csv", index=False)
+data_test.to_csv(f"{MAIN_DIR}df_{FILENAME}_flows_tmp.csv", index=False)
 
 #########################################
 # Work on pseudo flow with no IP layer...
@@ -299,5 +292,5 @@ for cond in [condition_ether_raw, condition_arp,
 #    condition_flow_id = (data_test['flow_id'] == flow_id)
 #    data_test.loc[condition_flow_id, "flow_id"] = i+start_index
     
-data_test.to_csv(f"{RESULTS_DIR}DF_{TYPE}_FLOWS_{PROTO}_FINAL_4.csv", index=False)
+data_test.to_csv(f"{MAIN_DIR}df_{FILENAME}_flows.csv", index=False)
 
